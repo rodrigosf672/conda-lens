@@ -1,20 +1,26 @@
-# Conda-Lens
+# Conda-Lens 🔬
 
-**The AI Environment Doctor & Reproducibility Toolkit**
+**The AI Environment Doctor** — A CLI and lightweight dashboard for inspecting Python environments, diagnosing compatibility issues, analyzing dependency graphs, and generating reproducibility snapshots.
 
-Conda-Lens is a developer tool that helps data scientists and machine learning engineers inspect, diagnose, and understand their Python environments. It provides fast environment inspection, rule-based diagnostics, reproducibility cards, and a read-only migration planner that analyzes compatibility across `pip`, `conda`, `uv`, and `pixi`.
-
-Conda-Lens includes both a command line interface and a web dashboard, giving you a clear and structured view of your environment health, package layout, and potential conflict risks.
+Conda-Lens helps developers understand their Python environments across conda, pip, and uv workflows. It provides fast, transparent analysis with a clean UI for viewing environment details, diagnostics, and migration planning.
 
 ## Features
 
-- **Diagnose**: Detect common issues like Pip/Conda mixing, Torch/CUDA mismatches, and version conflicts.
-- **Repro Card**: Generate a shareable YAML/JSON card describing your environment.
-- **Lint**: Check your Python scripts for imports that are missing from your environment.
-- **Migration Planner (read-only)**: Analyze migration plans between pip, conda, uv, and pixi with safety checks. No execution.
-- **Inspect**: View detailed environment information including packages, Python version, and GPU details.
-- **Web Dashboard**: Professional web UI for environment inspection and diagnostics.
-- **Dependency-Aware Migration**: Builds package and reverse-dependency graphs to plan safe group migrations.
+- Environment Inspector: Deep inspection of conda, pip, and uv packages
+- Diagnostic Engine: Rule-based analysis for detecting conflicts, missing dependencies, and compatibility issues
+- Reproducibility Snapshots: Generate shareable environment cards with full metadata
+- Dependency Graph Viewer: Visualize package dependencies and reverse dependencies
+- Migration Analysis: Analyze package manager migrations (pip ↔ conda ↔ uv ↔ pixi)
+- Smart Caching: Fast resolver caching for improved performance
+- Web Dashboard: Optional browser-based UI for visual exploration
+
+## Architecture
+
+Conda-Lens consists of three layers:
+
+1. CLI: Command-line interface for quick inspections and diagnostics
+2. API: FastAPI backend providing environment data and analysis endpoints
+3. Dashboard: Optional web UI for visual exploration (read-only for migrations)
 
 ## Installation
 
@@ -22,379 +28,229 @@ Conda-Lens includes both a command line interface and a web dashboard, giving yo
 pip install conda-lens
 ```
 
-## Usage
+Requirements: Python 3.9+ recommended
 
-### Diagnose Environment Issues
-
-```bash
-# Diagnose the current environment
-conda-lens diagnose
-```
-
-### Generate Reproducibility Card
-
-```bash
-# Generate a reproducibility card
-conda-lens repro-card --output environment.yaml
-
-# Output as JSON
-conda-lens repro-card --format json
-```
-
-### Lint Python Files
-
-```bash
-# Lint a single file
-conda-lens lint my_script.py
-
-# Lint entire directory
-conda-lens lint src/
-```
-
-### Migration Planning (read-only)
-
-Plan migrations between `pip`, `conda`, `uv`, and `pixi` with safety insights. The dashboard is read-only.
-
-```bash
-# Generate a migration plan (read-only)
-conda-lens switch-all --to conda
-
-# Plan for specific packages
-conda-lens switch-all --to pip numpy scipy pandas
-
-# Use specific conda channel for planning
-conda-lens switch-all --to conda --channel conda-forge
-```
-
-Safety Insights:
-- Version compatibility checking  
-- CUDA build detection and warnings  
-- Missing package detection  
-- Dependency and reverse-dependency analysis  
+## CLI Usage
 
 ### Inspect Environment
 
+View detailed information about your current environment:
+
 ```bash
-# View environment details
 conda-lens inspect
-
-# Output as JSON
-conda-lens inspect --json-output
 ```
 
-### Web Dashboard
+Output includes environment name, path, Python version, platform info, and package list.
+
+### Run Diagnostics
+
+Analyze your environment for potential issues:
 
 ```bash
-# Start web UI at http://localhost:8000
-conda-lens web
-
-# Use custom port
-conda-lens web --port 3000
+conda-lens diagnose
 ```
 
-### Other Commands
+The diagnostic engine checks for:
+- Duplicate packages across managers
+- Version conflicts
+- Missing dependencies
+- CUDA compatibility issues
+- Python version mismatches
+
+### Generate Reproducibility Snapshot
+
+Create a reproducibility card for your environment:
 
 ```bash
-# Compare environments
-conda-lens diff other-env-name
+# Display to stdout
+conda-lens repro-card
 
-# Explain conda solver errors with LLM
-conda-lens explain error.log
+# Save to file
+conda-lens repro-card --output repro.yaml
 
-# Run matrix testing across Python versions
-conda-lens matrix-test script.py --versions 3.10 3.11 3.12
-
-# Download and convert HuggingFace models
-conda-lens sandbox meta-llama/Llama-2-7b-hf
+# JSON format
+conda-lens repro-card --output repro.json --format json
 ```
 
-## Migration Examples
+### Warm Dependency Cache
 
-### Example 1: Migrate all pip packages to conda
+Pre-populate the resolver cache for faster analysis:
 
 ```bash
+conda-lens cache warm
+```
+
+### Migration Planning
+
+Analyze package manager migrations:
+
+```bash
+# Plan migration to conda
 conda-lens switch-all --to conda
-conda-lens switch-all --to conda --execute
+
+# Plan migration to pip
+conda-lens switch-all --to pip
+
+# Migrate specific packages
+conda-lens switch-all --to uv numpy scipy pandas
+
+# Execute migration (use with caution)
+conda-lens switch-all --to conda --execute --yes
 ```
 
-### Example 2: Migrate specific scientific packages
+Note: Migration execution is CLI-only. The dashboard provides read-only analysis.
+
+### Additional Commands
 
 ```bash
-conda-lens switch-all --to conda numpy scipy pandas --channel conda-forge --execute
-```
+# Lint Python files for missing imports
+conda-lens lint path/to/code
 
-### Example 3: Rollback a migration
-
-```bash
+# Undo last migration
 conda-lens undo
-```
 
-## Safety Model
-
-The migration planner includes multiple safety checks:
-
-1. Version Matching
-2. CUDA Detection
-3. Dependency Chain Blocking
-4. Group Migration (Atomic)
-5. Auto-heal rollback detection
-
-## Web Dashboard
-
-Start the dashboard:
-
-```
-conda-lens web --port 8000
-```
-
-Features:
-- Environment summary: name, Python, path, OS/machine, conda/pip counts
-- Diagnostics: rules and suggestions with clear severity
-- Package search/filter: live search, manager filter
-- Repro card viewer: inline preview with Copy/Download actions
-- Migration planner (Switch-All): select target manager, generate plan, execute if safe
-- Per-package migration: open modal, plan and execute for a single package
-- Rollback: banner shows when migrations exist; undo last migration
-- Dependency graphs and reverse-dependency graphs for selected package
-- Blocked-package explanations and group migration preview in modal
-
-CLI ↔ Dashboard mapping:
-
-| Capability              | CLI                      | Dashboard                      |
-|-------------------------|--------------------------|---------------------------------|
-| Switch-All plan         | `conda-lens switch-all`  | Switch-All section              |
-| Execute migration       | `conda-lens switch-all --execute` | Execute Migration button |
-| Undo last migration     | `conda-lens undo`        | Undo Last Migration button      |
-| Per-package plan        | `conda-lens switch -p`   | Package row “Switch” modal      |
-| Repro card export       | `conda-lens repro-card`  | Copy/Download YAML in dashboard |
-
-Screenshots (placeholders):
-- Dashboard Overview
-- Switch-All Plan
-- Per-package Modal
-- Rollback Banner
-3. Missing Package Detection
-4. Atomic Operations
-5. Automatic Rollback
-6. Rollback History (`~/.conda-lens/rollback.json`)
-
-## Output Example
-
-```
-Migration Plan: → conda
-Total packages to migrate: 15
-...
-Summary:
-  Safe to migrate: 12
-  Conflicts: 2
-  Missing: 1
-  Unsupported: 0
-  Blocked: 1 (blocked by dependency chain)
-
-Group Migration:
-- Order: a → b → c
-- Atomic: all-or-nothing execution with immediate rollback on failure
-
-Auto-Heal Rollback Detection:
-- After execution, environment is re-scanned; if any migrated package was replaced unexpectedly, migration is marked failed and rolled back.
-```
-
-## Contributing
-
-Contributions are welcome! If you'd like to improve Conda-Lens, please open an issue first so we can discuss your proposed changes. After alignment, feel free to submit a Pull Request.
-
----
-
-# Project Status Overview
-
-## A. Working Features (Implemented)
-
-### CLI Commands
-
-- `conda-lens inspect`
-  - Inspects environment via `get_active_env_info`.
-  - Supports JSON output.
-  - Displays environment metadata, GPU info, package subset.
-
-- `conda-lens diagnose`
-  - Runs diagnostics via `run_diagnostics`.
-  - Supports JSON output.
-  - Displays warnings and errors using diagnostic rules.
-
-- `conda-lens repro-card`
-  - Generates reproducibility card (YAML/JSON).
-  - Uses `generate_repro_card`.
-
-- `conda-lens lint`
-  - Detects missing imports for files/directories.
-  - Exits with code `1` if imports missing.
-
-- `conda-lens explain`
-  - Uses OpenAI API to explain solver errors.
-  - Includes graceful error handling.
-
-- `conda-lens matrix-test`
-  - Creates temporary environments.
-  - Runs provided script for multiple Python versions.
-  - Outputs JSON with pass/fail per version.
-
-- `conda-lens sandbox`
-  - Downloads HuggingFace model.
-  - Creates mock GGUF output (placeholder logic).
-
-- `conda-lens switch-all`
-  - Generates migration plan.
-  - Supports pip/conda/uv/pixi.
-  - Executes migration with rollback support.
-  - Saves rollback history.
-
-- `conda-lens undo`
-  - Restores previous state from rollback file.
-
-- `conda-lens web`
-  - Launches FastAPI web dashboard.
-
-### Dashboard Components
-
-- Main Dashboard
-  - Diagnostics panel
-  - Stats grid: Python version, OS, manager counts
-  - Package table with search/filter
-  - Header actions (refresh, planner, repro card)
-
-- Repro Card Viewer
-  - YAML view with copy/download
-
-- Migration Planner UI
-  - Select target manager
-  - Fetch `/api/migration-plan`
-  - Displays detailed migration table
-
-### API Endpoints
-
-- `/api/refresh`
-  - Returns summary of environment.
-
-- `/api/migration-plan`
-  - Returns detailed migration plan JSON.
-
-### Internal Utilities
-
-- Environment inspector  
-- Diagnostics rule engine  
-- Migration planner + resolver  
-- Diff utilities  
-- IPython magic  
-
-### Tests (Passing)
-
-- Diagnostics rules  
-- Migration planner logic  
-- Migration execution + rollback  
-- Package resolver behavior  
-
-
-
-## B. Partially Implemented / Missing Features
-
-- `conda-lens diff` is not fully implemented for named env comparison.
-- `TorchCudaRule` exists but disabled.
-- Sandbox GGUF logic is stubbed.
-- LLM explainer requires API and network.
-- `web_ui_old.py` remains unused.
-- `jinja2` included but unused.
-
-
-
-## C. Known Limitations
-
-- Manager inference is heuristic.
-- GPU detection can silently fail.
-- Migration `_analyze_package` lacks guard for `None` build.
-- Matrix tester does not manage dependencies.
-- Diff command shows instructions, not functionality.
-- Subprocess error handling is broad.
-
-
-
-## D. Architecture Summary
-
-- CLI built with Typer + Rich.
-- Web dashboard via FastAPI + Uvicorn.
-- Environment inspection through Conda/Pip calls.
-- Migration planner orchestrates resolver + executor + rollback.
-- Unified EnvInfo model shared across CLI + dashboard.
-- HTML rendered manually in Python—no Jinja2 templates.
-
-
-
-## E. Development Roadmap (Based Only on Existing TODOs)
-
-- Implement full `diff` against named environments.
-- Re-enable and validate `TorchCudaRule`.
-- Add guard for missing `pkg.build` in migration analysis.
-- Replace sandbox placeholder with real GGUF conversion.
-- Add backend tests for API endpoints.
-- Remove unused legacy files or wire up accordingly.
-Dependency-aware migration:
-
-```
-conda-lens migrate --to conda --package numpy
-```
-
-- Detects dependents that block migration.
-- Validates availability of dependents and their own dependencies on target manager.
-- Generates group migration order in topological sequence.
-- Executes atomically with immediate rollback on failure.
-## Migration Planner (Read-Only)
-
-The dashboard now presents a read-only migration planner. It shows:
-
-- Target manager dropdown and Analyze button
-- A responsive migration plan table with safety status and reasons
-- No execution controls in the UI (CLI retains full execution)
-
-## Dependency Graph Support
-
-- Planner builds dependency and reverse-dependency graphs
-- Detects blocked packages and groups them
-- Returns a `group_order` preview to aid planning
-
-## Known Limitations → Resolved
-
-- Infinite “Analyzing…” states resolved with robust error handling and `.finally` cleanup
-- Endpoint hangs mitigated via strict 6s subprocess timeouts and structured error JSON
-- UI consistently resets loading states on success and failure
-
-## Dashboard Stability Improvements
-
-- Endpoints log requests, subprocess commands, and exceptions
-- Resolver outputs truncated to 300 chars for clean logs
-- Progress bar hides automatically on completion or error
-
-## Environment Selector Restored
-
-- `/api/environments` returns a valid list of environments
-- Selection updates the active environment and re-renders headers and tables
-### Cache commands
-
-Show cache:
-```bash
-conda-lens cache show
-```
-
-Cache statistics:
-```bash
+# Cache management
+conda-lens cache refresh
 conda-lens cache stats
-```
-
-Clear cache:
-```bash
 conda-lens cache clear
 ```
 
-Warm cache:
+## Dashboard Usage
+
+Launch the web dashboard:
+
+```bash
+conda-lens web
+```
+
+The dashboard will start at `http://127.0.0.1:8000` (or next available port).
+
+### Dashboard Features
+
+1. Environment Selector: Switch between conda environments
+2. Package Inspector: Search, filter, and view package details
+3. Diagnostics Panel: Visual display of environment health
+4. Reproducibility Card: View and download environment snapshots
+5. Migration Planner: Analyze package manager migrations (read-only)
+6. Dependency Graph: Visualize package dependencies
+
+### Using the Migration Planner
+
+The dashboard migration planner is read-only and provides:
+
+- Target manager selection (pip, conda, uv, pixi)
+- Safety analysis for each package
+- Conflict detection
+- Version availability checking
+- Dependency impact analysis
+
+Important: 
+- The planner does NOT auto-trigger on page load
+- Changing environments resets the target manager to "pip"
+- All resolver calls use the disk cache at `~/.cache/conda-lens/resolver/`
+- Migration execution must be done via CLI
+
+### Caching for Performance
+
+The dashboard uses aggressive caching to improve performance:
+
+- Resolver Cache: Package version lookups are cached to disk
+- Dependency Cache: Dependency graphs are cached and refreshed daily
+- Cache Location: `~/.cache/conda-lens/resolver/<package>.json`
+
+To warm the cache manually:
+
 ```bash
 conda-lens cache warm
-conda-lens cache warm --parallel
 ```
+
+## Reproducibility Card
+
+The reproducibility card captures:
+
+- Environment metadata (name, path, Python version)
+- Complete package list with versions and managers
+- Platform information (OS, architecture)
+- CUDA driver version (if applicable)
+- GPU information (if applicable)
+- Timestamp and conda-lens version
+
+### Why It Matters
+
+Reproducibility cards enable:
+
+- Collaboration: Share exact environment specs with teammates
+- Debugging: Reproduce issues in identical environments
+- Documentation: Track environment evolution over time
+- Compliance: Maintain audit trails for production environments
+
+### Sharing Snapshots
+
+```bash
+# Generate YAML snapshot
+conda-lens repro-card --output snapshot.yaml
+
+# Generate JSON snapshot
+conda-lens repro-card --output snapshot.json --format json
+
+# Share via version control
+git add snapshot.yaml
+git commit -m "Add environment snapshot"
+```
+
+## Caching System
+
+Conda-Lens uses a two-tier caching system:
+
+### 1. In-Memory Cache
+
+Fast lookups for the current session. Cleared when the process exits.
+
+### 2. Disk Cache
+
+Persistent cache stored at `~/.cache/conda-lens/resolver/`:
+
+- Package versions: Cached per manager (conda, pip, uv, pixi)
+- Dependencies: Cached dependency graphs
+- TTL: Cache entries are validated on each use
+
+### Cache Commands
+
+```bash
+# Warm the cache (pre-populate with current environment)
+conda-lens cache warm
+
+# Warm cache in parallel (faster)
+conda-lens cache warm --parallel
+
+# View cache statistics
+conda-lens cache stats
+
+# Clear all cache entries
+conda-lens cache clear
+
+# Refresh stale entries
+conda-lens cache refresh
+```
+
+### Dashboard Caching Behavior
+
+- All resolver calls check the disk cache first
+- Cache hits are logged: `INFO: Using cached resolver result for <package> from <manager>`
+- The dashboard automatically uses `use_disk_cache=True` for all migration planning
+- Background worker refreshes dependency cache every 24 hours
+
+## Contributing
+
+See [CONTRIBUTING.md](CONTRIBUTING.md) for development setup, coding standards, and how to submit pull requests.
+
+## License
+
+MIT License - see LICENSE file for details.
+
+---
+
+Project Status: Active development. Contributions welcome!
+
+Maintainer: Rodrigo Silva Ferreira  
+Repository: https://github.com/rodrigosf672/conda-lens
