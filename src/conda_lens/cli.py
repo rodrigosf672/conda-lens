@@ -23,45 +23,96 @@ cache_app = typer.Typer(help="Dependency cache utilities")
 console = Console()
 
 @app.command()
-def inspect(json_output: bool = False):
+def inspect(
+    env: Optional[str] = typer.Option(None, "--env", "-e", help="Name of conda environment to inspect"),
+    prefix: Optional[str] = typer.Option(None, "--prefix", help="Path to environment prefix"),
+    json_output: bool = False
+):
     """
-    Inspect the current environment and list details.
+    Inspect the current environment or a specified environment.
+    
+    Examples:
+        conda-lens inspect                    # Inspect active environment
+        conda-lens inspect --env myenv        # Inspect specific environment
+        conda-lens inspect --prefix /path     # Inspect by prefix path
     """
-    env = get_active_env_info()
+    # Resolve environment
+    from .env_resolver import resolve_env_prefix, load_env_info, EnvironmentResolverError
+    from pathlib import Path
+    
+    try:
+        if prefix:
+            # Use explicit prefix
+            env_info = load_env_info(Path(prefix))
+        elif env:
+            # Resolve environment name to prefix
+            env_prefix = resolve_env_prefix(env)
+            env_info = load_env_info(env_prefix, env_name=env)
+        else:
+            # Use active environment
+            env_info = get_active_env_info()
+    except EnvironmentResolverError as e:
+        console.print(f"[red]Error:[/red] {e}")
+        raise typer.Exit(code=1)
+    
     if json_output:
         import dataclasses
-        console.print_json(data=dataclasses.asdict(env))
+        console.print_json(data=dataclasses.asdict(env_info))
     else:
         console.print(Panel(f"[bold]Environment Inspection[/bold]", style="cyan"))
-        console.print(f"[bold]Name:[/bold] {env.name}")
-        console.print(f"[bold]Path:[/bold] {env.path}")
-        console.print(f"[bold]Python:[/bold] {env.python_version}")
-        console.print(f"[bold]OS:[/bold] {env.os_info}")
-        console.print(f"[bold]Platform:[/bold] {env.platform_machine}")
-        if env.cuda_driver_version:
-            console.print(f"[bold]CUDA Driver:[/bold] {env.cuda_driver_version}")
+        console.print(f"[bold]Name:[/bold] {env_info.name}")
+        console.print(f"[bold]Path:[/bold] {env_info.path}")
+        console.print(f"[bold]Python:[/bold] {env_info.python_version}")
+        console.print(f"[bold]OS:[/bold] {env_info.os_info}")
+        console.print(f"[bold]Platform:[/bold] {env_info.platform_machine}")
+        if env_info.cuda_driver_version:
+            console.print(f"[bold]CUDA Driver:[/bold] {env_info.cuda_driver_version}")
         
-        if env.gpu_info:
+        if env_info.gpu_info:
             console.print("\n[bold]GPUs Detected:[/bold]")
-            for gpu in env.gpu_info:
+            for gpu in env_info.gpu_info:
                 console.print(f" - GPU {gpu['index']}: {gpu['name']} ({int(gpu['total_memory_mb'])} MB)")
 
-        console.print(f"\n[bold]Packages ({len(env.packages)}):[/bold]")
+        console.print(f"\n[bold]Packages ({len(env_info.packages)}):[/bold]")
         # List first 10 as a preview
-        sorted_pkgs = sorted(env.packages.values(), key=lambda p: p.name)
+        sorted_pkgs = sorted(env_info.packages.values(), key=lambda p: p.name)
         for p in sorted_pkgs[:10]:
             console.print(f" - {p.name} ({p.version}) [{p.manager}]")
         if len(sorted_pkgs) > 10:
             console.print(f" ... and {len(sorted_pkgs) - 10} more.")
 
 @app.command()
-def diagnose(json_output: bool = False):
+def diagnose(
+    env_name: Optional[str] = typer.Option(None, "--env", "-e", help="Name of conda environment to diagnose"),
+    prefix: Optional[str] = typer.Option(None, "--prefix", help="Path to environment prefix"),
+    json_output: bool = False
+):
     """
-    Run diagnostics on the current environment.
+    Run diagnostics on the current environment or specified environment.
+    
+    Examples:
+        conda-lens diagnose                   # Diagnose active environment
+        conda-lens diagnose --env myenv       # Diagnose specific environment
+        conda-lens diagnose --prefix /path    # Diagnose by prefix path
     """
+    # Resolve environment
+    from .env_resolver import resolve_env_prefix, load_env_info, EnvironmentResolverError
+    from pathlib import Path
+    
+    try:
+        if prefix:
+            env_info = load_env_info(Path(prefix))
+        elif env_name:
+            env_prefix = resolve_env_prefix(env_name)
+            env_info = load_env_info(env_prefix, env_name=env_name)
+        else:
+            env_info = get_active_env_info()
+    except EnvironmentResolverError as e:
+        console.print(f"[red]Error:[/red] {e}")
+        raise typer.Exit(code=1)
+    
     with console.status("[bold green]Inspecting environment..."):
-        env = get_active_env_info()
-        results = run_diagnostics(env)
+        results = run_diagnostics(env_info)
 
     if json_output:
         import dataclasses
@@ -69,10 +120,10 @@ def diagnose(json_output: bool = False):
         console.print_json(data=output)
         return
 
-    console.print(f"\n[bold]Environment:[/bold] {env.name} ({env.path})")
-    console.print(f"[bold]Python:[/bold] {env.python_version}")
-    if env.cuda_driver_version:
-        console.print(f"[bold]CUDA Driver:[/bold] {env.cuda_driver_version}")
+    console.print(f"\n[bold]Environment:[/bold] {env_info.name} ({env_info.path})")
+    console.print(f"[bold]Python:[/bold] {env_info.python_version}")
+    if env_info.cuda_driver_version:
+        console.print(f"[bold]CUDA Driver:[/bold] {env_info.cuda_driver_version}")
     
     if not results:
         console.print(Panel("[bold green]No issues found! Your environment looks healthy.[/bold green]", title="Diagnostics"))
