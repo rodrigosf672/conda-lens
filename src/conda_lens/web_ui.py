@@ -232,7 +232,7 @@ def api_migration_plan(target: str = "conda", limit: int = 50):
     planner = None
     try:
         env = get_active_env_info()
-        planner = MigrationPlanner(env)
+        planner = MigrationPlanner(env, use_disk_cache=True)
         # Build plan for all packages (cache-backed, fast)
         sorted_pkgs = sorted(env.packages.values(), key=lambda p: p.name.lower())
         names = [p.name for p in sorted_pkgs]
@@ -1055,7 +1055,7 @@ def dashboard(env_name: str = None):
                 <div class="panel-header">
                     <h2 class="panel-title">Switch-All</h2>
                     <div class="panel-controls">
-                        <select class="filter-select" id="switch-target" aria-label="Target manager">
+                        <select class="filter-select" id="target-select" aria-label="Target manager">
                             <option value="conda">conda</option>
                             <option value="pip">pip</option>
                             <option value="uv">uv</option>
@@ -1161,9 +1161,12 @@ def dashboard(env_name: str = None):
                             if (e.name === current) opt.selected = true;
                             sel.appendChild(opt);
                         }});
-                        sel.addEventListener('change', () => {{
+                        sel.addEventListener('change', () => {
                             const val = sel.value;
-                            fetch('/api/preferences/last-env?name=' + encodeURIComponent(val), {{ method: 'POST' }})
+                            const ts = document.getElementById("target-select");
+                            if (ts) ts.value = "pip";
+                            if (typeof clearMigrationTable === 'function') clearMigrationTable();
+                            fetch('/api/preferences/last-env?name=' + encodeURIComponent(val), { method: 'POST' })
                                 .then(() => {{
                                     location.href = '/?env=' + encodeURIComponent(val);
                                 }});
@@ -1237,14 +1240,24 @@ def dashboard(env_name: str = None):
                     }});
             }}
             
+            // Clear migration table
+            function clearMigrationTable() {
+                const tbody = document.getElementById('switchall-body');
+                if (tbody) tbody.innerHTML = '';
+                const table = document.getElementById('switchall-table');
+                if (table) table.style.display = 'none';
+                const summary = document.getElementById('switchall-summary');
+                if (summary) summary.style.display = 'none';
+            }
+
             // Switch-All logic
-            function loadSwitchAllPlan() {{
-                const target = document.getElementById('switch-target').value;
+            function loadSwitchAllPlan() {
+                const t = document.getElementById("target-select").value;
                 const btn = document.getElementById('switch-generate');
-                const sel = document.getElementById('switch-target');
-                if (btn) {{ btn.disabled = true; btn.textContent = 'Analyzing…'; }}
-                if (sel) {{ sel.disabled = true; }}
-                fetch(`/api/migration-plan?target=${{target}}`)
+                const sel = document.getElementById('target-select');
+                if (btn) { btn.disabled = true; btn.textContent = 'Analyzing…'; }
+                if (sel) { sel.disabled = true; }
+                fetch(`/api/migration-plan?target=${t}`)
                     .then(r => {{ if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); }})
                     .then(data => {{
                         const tbody = document.getElementById('switchall-body');
@@ -1554,7 +1567,7 @@ def migration_planner_page():
         <div class="container">
             <div class="controls">
                 <label for="target-manager">Target Manager:</label>
-                <select id="target-manager" onchange="loadMigrationPlan()">
+                <select id="target-select" onchange="loadMigrationPlan()">
                     <option value="conda">conda</option>
                     <option value="pip">pip</option>
                     <option value="uv">uv</option>
@@ -1608,8 +1621,8 @@ def migration_planner_page():
         </div>
         
         <script>
-            function loadMigrationPlan() {{
-                const target = document.getElementById('target-manager').value;
+            function loadMigrationPlan() {
+                const t = document.getElementById("target-select").value;
                 const loading = document.getElementById('loading');
                 const table = document.getElementById('migration-table');
                 const summary = document.getElementById('summary');
