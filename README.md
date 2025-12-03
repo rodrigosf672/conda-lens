@@ -8,9 +8,7 @@ Conda-Lens helps developers understand their Python environments across conda, p
 
 ## Demo
 
-https://github.com/user-attachments/assets/conda-lens-demo.mov
-
-*Watch the full demo: [Screen Recording 2025-12-03 at 02.21.34.mov](conda-lens-demo.mov)*
+*Watch the full [demo here](conda-lens-demo.mov)*
 
 
 ## Features
