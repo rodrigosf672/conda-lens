@@ -4,6 +4,15 @@
 
 Conda-Lens helps developers understand their Python environments across conda, pip, and uv workflows. It provides fast, transparent analysis with a clean UI for viewing environment details, diagnostics, and migration planning.
 
+![Conda-Lens Dashboard](screenshot.png)
+
+## Demo
+
+https://github.com/user-attachments/assets/conda-lens-demo.mov
+
+*Watch the full demo: [Screen Recording 2025-12-03 at 02.21.34.mov](conda-lens-demo.mov)*
+
+
 ## Features
 
 - Environment Inspector: Deep inspection of conda, pip, and uv packages
