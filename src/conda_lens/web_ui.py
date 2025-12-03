@@ -1161,12 +1161,12 @@ def dashboard(env_name: str = None):
                             if (e.name === current) opt.selected = true;
                             sel.appendChild(opt);
                         }});
-                        sel.addEventListener('change', () => {
+                        sel.addEventListener('change', () => {{
                             const val = sel.value;
                             const ts = document.getElementById("target-select");
                             if (ts) ts.value = "pip";
                             if (typeof clearMigrationTable === 'function') clearMigrationTable();
-                            fetch('/api/preferences/last-env?name=' + encodeURIComponent(val), { method: 'POST' })
+                            fetch('/api/preferences/last-env?name=' + encodeURIComponent(val), {{ method: 'POST' }})
                                 .then(() => {{
                                     location.href = '/?env=' + encodeURIComponent(val);
                                 }});
@@ -1241,23 +1241,23 @@ def dashboard(env_name: str = None):
             }}
             
             // Clear migration table
-            function clearMigrationTable() {
+            function clearMigrationTable() {{
                 const tbody = document.getElementById('switchall-body');
                 if (tbody) tbody.innerHTML = '';
                 const table = document.getElementById('switchall-table');
                 if (table) table.style.display = 'none';
                 const summary = document.getElementById('switchall-summary');
                 if (summary) summary.style.display = 'none';
-            }
+            }}
 
             // Switch-All logic
-            function loadSwitchAllPlan() {
+            function loadSwitchAllPlan() {{
                 const t = document.getElementById("target-select").value;
                 const btn = document.getElementById('switch-generate');
                 const sel = document.getElementById('target-select');
-                if (btn) { btn.disabled = true; btn.textContent = 'Analyzing…'; }
-                if (sel) { sel.disabled = true; }
-                fetch(`/api/migration-plan?target=${t}`)
+                if (btn) {{ btn.disabled = true; btn.textContent = 'Analyzing…'; }}
+                if (sel) {{ sel.disabled = true; }}
+                fetch(`/api/migration-plan?target=${{t}}`)
                     .then(r => {{ if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); }})
                     .then(data => {{
                         const tbody = document.getElementById('switchall-body');
@@ -1621,7 +1621,7 @@ def migration_planner_page():
         </div>
         
         <script>
-            function loadMigrationPlan() {
+            function loadMigrationPlan() {{
                 const t = document.getElementById("target-select").value;
                 const loading = document.getElementById('loading');
                 const table = document.getElementById('migration-table');
@@ -1645,7 +1645,7 @@ def migration_planner_page():
                     progressText.textContent = percent + '% • ' + elapsed + 's • ETA ' + (eta > 0 ? eta + 's' : '--');
                 }}, 200);
                 
-                fetch(`/api/migration-plan?target=${{target}}`)
+                fetch(`/api/migration-plan?target=${{t}}`)
                     .then(r => {{ if (!r.ok) {{ return r.json().then(err => {{ throw new Error(err.message || ('HTTP ' + r.status)); }}); }} return r.json(); }})
                     .then(data => {{
                         // Update summary
