@@ -14,7 +14,7 @@ from .lint import check_imports
 from .diff import diff_envs
 from .solver_explainer import explain_error
 from .matrix_tester import run_matrix_test
-from .sandbox import convert_to_gguf
+
 from .web_ui import start_server, pick_port
 from .cache import refresh_cache, build_graphs, update_cache
 
@@ -203,21 +203,7 @@ def matrix_test(
     results = run_matrix_test(versions, script)
     console.print_json(data=results)
 
-@app.command()
-def sandbox(
-    model_id: Optional[str] = typer.Argument(None, help="HuggingFace model ID"),
-    output: str = typer.Option("model.gguf", "--output", "-o", help="Output file path")
-):
-    """
-    Download and convert a HF model (Placeholder).
-    """
-    if model_id is None:
-        console.print("[bold]Usage:[/bold] conda-lens sandbox <model_id> [--output model.gguf]")
-        console.print("\nDownload and convert HuggingFace models to GGUF format.")
-        console.print("\n[yellow]Example:[/yellow] conda-lens sandbox meta-llama/Llama-2-7b-hf")
-        return
-    
-    convert_to_gguf(model_id, output)
+
 
 @app.command(name="switch-all")
 def switch_all(
