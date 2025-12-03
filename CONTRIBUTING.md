@@ -288,7 +288,3 @@ Important: The dashboard is read-only for migrations. Execution must be done via
 ## Code of Conduct
 
 Be respectful, inclusive, and constructive. We're all here to make Conda-Lens better.
-
----
-
-Thank you for contributing to Conda-Lens! 🚀

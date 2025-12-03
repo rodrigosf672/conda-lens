@@ -42,7 +42,7 @@ Status: Complete
 - [x] Disk-based resolver caching
 - [x] Dependency graph visualization
 
-### Phase 2: Enhanced Diagnostics (Q1 2025)
+### Phase 2: Enhanced Diagnostics (Q1 2026)
 
 Goal: Make the diagnostic engine more powerful and actionable.
 
@@ -53,7 +53,7 @@ Goal: Make the diagnostic engine more powerful and actionable.
 - [ ] Python Version Compatibility: Warn about packages incompatible with current Python version
 - [ ] Security Vulnerability Scanning: Integrate with vulnerability databases (optional)
 
-### Phase 3: Reproducibility Enhancements (Q2 2025)
+### Phase 3: Reproducibility Enhancements (Q2 2026)
 
 Goal: Expand the reproducibility card into a full "environment passport."
 
@@ -67,7 +67,7 @@ Goal: Expand the reproducibility card into a full "environment passport."
 - [ ] HTML Export: Generate static HTML reproducibility reports
 - [ ] CI/CD Integration: GitHub Actions / GitLab CI templates
 
-### Phase 4: Smarter Caching (Q2 2025)
+### Phase 4: Smarter Caching (Q3 2026)
 
 Goal: Make caching more intelligent and efficient.
 
@@ -77,7 +77,7 @@ Goal: Make caching more intelligent and efficient.
 - [ ] Cache Sharing: Optional shared cache for teams (via network drive or S3)
 - [ ] Cache Analytics: Track hit rates, stale entries, and performance gains
 
-### Phase 5: Advanced Features (Q3 2025)
+### Phase 5: Advanced Features (Q4 2026)
 
 Goal: Add power-user features for complex workflows.
 
@@ -198,8 +198,3 @@ This roadmap is aspirational and subject to change. Dates are estimates, not com
 - Maintainer availability
 - Technical feasibility
 - Ecosystem changes (new package managers, Python versions, etc.)
-
----
-
-Last Updated: December 2024  
-Maintainer: Rodrigo Silva Ferreira

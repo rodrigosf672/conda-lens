@@ -247,10 +247,3 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for development setup, coding standards, 
 ## License
 
 MIT License - see LICENSE file for details.
-
----
-
-Project Status: Active development. Contributions welcome!
-
-Maintainer: Rodrigo Silva Ferreira  
-Repository: https://github.com/rodrigosf672/conda-lens
