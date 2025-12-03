@@ -188,19 +188,70 @@ def explain(log_file: Optional[Path] = typer.Argument(None, help="Path to conda 
 @app.command(name="matrix-test")
 def matrix_test(
     script: Optional[str] = typer.Argument(None, help="Python script to test"),
-    versions: List[str] = typer.Option(["3.10", "3.11"], "--versions", "-v", help="Python versions to test")
+    versions: Optional[str] = typer.Option(None, "--versions", "-v", help="Python versions to test (space or comma-separated: '3.10 3.11 3.12' or '3.10,3.11,3.12')")
 ):
     """
     Run a smoke test script across multiple Python versions.
+    
+    Examples:
+        conda-lens matrix-test test.py --versions "3.10 3.11 3.12"
+        conda-lens matrix-test test.py --versions "3.10,3.11,3.12"
+        conda-lens matrix-test test.py -v "3.10 3.11"
     """
     if script is None:
-        console.print("[bold]Usage:[/bold] conda-lens matrix-test <script.py> [--versions 3.10 3.11 3.12]")
+        console.print("[bold]Usage:[/bold] conda-lens matrix-test <script.py> [--versions \"3.10 3.11 3.12\"]")
         console.print("\nTest a Python script across multiple Python versions.")
-        console.print("\n[yellow]Example:[/yellow] conda-lens matrix-test test.py --versions 3.10 3.11")
+        console.print("\n[yellow]Examples:[/yellow]")
+        console.print("  conda-lens matrix-test test.py --versions \"3.10 3.11 3.12\"")
+        console.print("  conda-lens matrix-test test.py --versions \"3.10,3.11,3.12\"")
+        console.print("  conda-lens matrix-test test.py -v \"3.11 3.12\"")
         return
     
-    console.print(f"Running matrix test for {script} on {versions}...")
-    results = run_matrix_test(versions, script)
+    # Parse and normalize versions
+    from .matrix_tester import parse_versions_input
+    try:
+        # Split by both space and comma
+        if versions:
+            # First split by comma, then by space
+            version_list = []
+            for part in versions.split(','):
+                version_list.extend(part.split())
+        else:
+            version_list = []
+        
+        parsed_versions = parse_versions_input(version_list)
+    except ValueError as e:
+        console.print(f"[red]Error:[/red] {e}")
+        raise typer.Exit(code=1)
+    
+    console.print(f"[bold]Running matrix test for {script}[/bold]")
+    console.print(f"Python versions: {', '.join(parsed_versions)}\n")
+    
+    with console.status("[bold green]Running tests..."):
+        results = run_matrix_test(parsed_versions, script)
+    
+    # Display results
+    console.print("\n[bold]Test Results:[/bold]\n")
+    
+    for version, result in results.items():
+        status = result["status"]
+        if status == "PASS":
+            console.print(f"  Python {version}: [green]✓ PASS[/green]")
+        elif status == "FAIL":
+            console.print(f"  Python {version}: [red]✗ FAIL[/red]")
+            if result.get("stderr"):
+                console.print(f"    Error: {result['stderr'][:100]}...")
+        elif status == "SETUP_FAIL":
+            console.print(f"  Python {version}: [yellow]⚠ SETUP FAILED[/yellow]")
+            if result.get("stderr"):
+                console.print(f"    Error: {result['stderr'][:100]}...")
+        elif status == "TIMEOUT":
+            console.print(f"  Python {version}: [yellow]⏱ TIMEOUT[/yellow]")
+        else:
+            console.print(f"  Python {version}: [dim]{status}[/dim]")
+    
+    # Output full JSON
+    console.print("\n[bold]Full Results (JSON):[/bold]")
     console.print_json(data=results)
 
 
