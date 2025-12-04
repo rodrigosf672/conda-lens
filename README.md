@@ -43,6 +43,8 @@ Requirements: Python 3.9+ recommended
 
 ## CLI Usage
 
+[Obs.: `--env` has been implemented; add instructions here later]
+
 ### Inspect Environment
 
 View detailed information about your current environment:
