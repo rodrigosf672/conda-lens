@@ -1,8 +1,8 @@
 # Conda-Lens 🔬
 
-**The AI Environment Doctor** — A CLI and lightweight dashboard for inspecting Python environments, diagnosing compatibility issues, analyzing dependency graphs, and generating reproducibility snapshots.
+Conda-Lens is a CLI and lightweight dashboard for inspecting Python environments, diagnosing compatibility issues, analyzing dependency graphs, and generating reproducibility snapshots.
 
-Conda-Lens helps developers understand their Python environments across conda, pip, and uv workflows. It provides fast, transparent analysis with a clean UI for viewing environment details, diagnostics, and migration planning.
+Conda-Lens helps developers understand their Python environments across `conda`, `pip`, `uv`, and `pixi` workflows. It provides fast, transparent analysis with a clean UI for viewing environment details, diagnostics, and migration planning.
 
 ![Conda-Lens Dashboard](screenshot.png)
 
