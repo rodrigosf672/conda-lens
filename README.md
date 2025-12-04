@@ -34,6 +34,10 @@ Conda-Lens consists of three layers:
 ```bash
 pip install conda-lens
 ```
+**NOTE**: During development, this doesn't work. Instead, use the following:
+```bash
+pip install -e .
+```
 
 Requirements: Python 3.9+ recommended
 
