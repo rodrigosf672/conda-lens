@@ -10,6 +10,15 @@ Conda-Lens helps developers understand their Python environments across `conda`,
 
 *Watch the full [demo here](conda-lens-demo.mov)*
 
+## Project Background
+
+I come from a chemistry background and I spent years feeling confused about Python environments. Conda, pip, uv, pixi, ABI issues, missing dependencies, CUDA problems, solver errors, packages installed twice in different managers, and environments that behaved differently from one day to the next. Most tools either gave me a vague error or a wall of information that did not tell me what the actual problem was, why it happened, or what I was supposed to do. Now that I work as a QA engineer, I see the same confusion happening to beginners and to experienced developers. So I want to build something that makes this whole space clearer and easier to understand.
+
+My intention is to implement many specific diagnostic rules, as real environments break in very specific ways. That is why the project includes checks for version conflicts, missing or wrong dependencies, duplicate installations across managers, Python ABI issues, CUDA and platform mismatches, solver problems, and the edge cases listed (see Issue #1, not fully implemented yet). The goal would be to give people explanations that are actually useful instead of leaving them to guess what went wrong.
+
+In the future I would like to add a button that can migrate an entire environment to pip, conda, uv, or pixi. Migration planning is slow at first because resolver results need to be cached, and the bigger challenge is the message we give the user. People need clear guidance about what is safe to migrate, what will probably break, and what their options are. I want Conda-Lens to help people make informed decisions instead of forcing them to read internal solver logs.
+
+I used AI to help write parts of the code, but I am testing and validating all the logic myself. The test suite is important because the tool is only useful if it is trustworthy. My hope is that Conda-Lens becomes something that would have helped me when I was starting out, and something that helps others avoid the same confusions.
 
 ## Features
 
