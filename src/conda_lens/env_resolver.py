@@ -167,7 +167,7 @@ def load_env_info(prefix: Path, env_name: Optional[str] = None) -> EnvInfo:
         python_version = "Unknown"
     
     # Get conda packages
-    conda_packages: Dict[str, PackageDetails] = {}
+    conda_packages: Dict[str, List[PackageDetails]] = {}
     try:
         result = subprocess.run(
             ["conda", "list", "--prefix", str(prefix), "--json"],
@@ -181,18 +181,21 @@ def load_env_info(prefix: Path, env_name: Optional[str] = None) -> EnvInfo:
             for pkg in packages_data:
                 name = pkg.get("name", "")
                 if name:
-                    conda_packages[name] = PackageDetails(
+                    pd = PackageDetails(
                         name=name,
                         version=pkg.get("version", "unknown"),
                         manager="conda",
                         build=pkg.get("build", ""),
                         channel=pkg.get("channel", "")
                     )
+                    if name not in conda_packages:
+                        conda_packages[name] = []
+                    conda_packages[name].append(pd)
     except Exception:
         pass  # Continue without conda packages
     
     # Get pip packages
-    pip_packages: Dict[str, PackageDetails] = {}
+    pip_packages: Dict[str, List[PackageDetails]] = {}
     try:
         result = subprocess.run(
             [str(python_exe), "-m", "pip", "list", "--format=json"],
@@ -205,12 +208,15 @@ def load_env_info(prefix: Path, env_name: Optional[str] = None) -> EnvInfo:
             packages_data = json.loads(result.stdout)
             for pkg in packages_data:
                 name = pkg.get("name", "")
-                if name and name not in conda_packages:  # Don't duplicate
-                    pip_packages[name] = PackageDetails(
+                if name and name not in conda_packages:  # Don't duplicate for now in this mode
+                    pd = PackageDetails(
                         name=name,
                         version=pkg.get("version", "unknown"),
                         manager="pip"
                     )
+                    if name not in pip_packages:
+                        pip_packages[name] = []
+                    pip_packages[name].append(pd)
     except Exception:
         pass  # Continue without pip packages
     

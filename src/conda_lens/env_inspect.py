@@ -2,8 +2,11 @@ import json
 import platform
 import subprocess
 import sys
+import glob
+from pathlib import Path
 from dataclasses import dataclass, field
 from typing import Any, Dict, List, Optional
+
 try:
     import pynvml
     HAS_PYNVML = True
@@ -16,7 +19,11 @@ class PackageDetails:
     version: str
     build: Optional[str] = None
     channel: Optional[str] = None
-    manager: str = "unknown"  # 'conda' or 'pypi'
+    manager: str = "unknown"  # 'conda' or 'pip'
+    depends: List[str] = field(default_factory=list)
+    requires_python: Optional[str] = None
+    subdir: Optional[str] = None
+    location: Optional[str] = None
 
 @dataclass
 class EnvInfo:
@@ -25,7 +32,8 @@ class EnvInfo:
     python_version: str
     os_info: str
     platform_machine: str
-    packages: Dict[str, PackageDetails] = field(default_factory=dict)
+    # Changed from Dict[str, PackageDetails] to Dict[str, List[PackageDetails]]
+    packages: Dict[str, List[PackageDetails]] = field(default_factory=dict)
     cuda_driver_version: Optional[str] = None
     gpu_info: List[Dict[str, Any]] = field(default_factory=list)
 
@@ -39,12 +47,9 @@ def get_active_env_info() -> EnvInfo:
     machine = platform.machine()
     
     # 2. Conda/Env Info
-    # Try to get info from conda first
     conda_prefix = sys.prefix
     conda_name = "unknown"
     
-    # Heuristic for env name: usually the last part of the prefix
-    # But strictly speaking, we might want to check CONDA_DEFAULT_ENV env var
     import os
     if "CONDA_DEFAULT_ENV" in os.environ:
         conda_name = os.environ["CONDA_DEFAULT_ENV"]
@@ -52,9 +57,9 @@ def get_active_env_info() -> EnvInfo:
         conda_name = os.path.basename(os.environ["VIRTUAL_ENV"])
     
     # 3. Packages
-    packages = _list_packages()
+    packages = _list_packages(Path(conda_prefix))
 
-    # 4. CUDA Driver (Basic check via nvidia-smi if available, or pynvml)
+    # 4. CUDA Driver
     cuda_version, gpu_details = _detect_cuda_info()
 
     return EnvInfo(
@@ -68,65 +73,122 @@ def get_active_env_info() -> EnvInfo:
         gpu_info=gpu_details
     )
 
-def _list_packages() -> Dict[str, PackageDetails]:
+def _list_packages(prefix: Path) -> Dict[str, List[PackageDetails]]:
     """
-    Lists packages using conda list --json if available, otherwise falls back to pip.
+    Lists packages by inspecting conda-meta (if available) and running pip inspect.
+    Returns a dictionary of package name -> List[PackageDetails] to support duplicates.
     """
-    packages = {}
-    
-    # Try conda list first
-    try:
-        result = subprocess.run(
-            ["conda", "list", "--json"],
-            capture_output=True,
-            text=True,
-            check=True
-        )
-        data = json.loads(result.stdout)
-        for pkg in data:
-            name = pkg.get("name", "").lower()
-            version = pkg.get("version", "")
-            build = pkg.get("build_string", None)
-            channel = pkg.get("channel", None)
-            
-            # Determine manager
-            # Conda output usually has 'channel' like 'pypi' for pip packages
-            manager = "conda"
-            if channel == "pypi" or pkg.get("scheduler_type") == "pypi":
-                manager = "pip"
-            
-            packages[name] = PackageDetails(
-                name=name,
-                version=version,
-                build=build,
-                channel=channel,
-                manager=manager
-            )
-        return packages
-    except (subprocess.CalledProcessError, FileNotFoundError):
-        # Fallback to pip list --format=json
-        pass
+    packages: Dict[str, List[PackageDetails]] = {}
 
-    try:
-        result = subprocess.run(
-            [sys.executable, "-m", "pip", "list", "--format=json"],
-            capture_output=True,
-            text=True,
-            check=True
-        )
-        data = json.loads(result.stdout)
-        for pkg in data:
-            name = pkg.get("name", "").lower()
-            version = pkg.get("version", "")
-            packages[name] = PackageDetails(
-                name=name,
-                version=version,
-                manager="pip"
+    def add_pkg(pkg: PackageDetails):
+        if pkg.name not in packages:
+            packages[pkg.name] = []
+        packages[pkg.name].append(pkg)
+
+    # 1. Conda Packages via conda-meta
+    conda_meta_dir = prefix / "conda-meta"
+    if conda_meta_dir.exists():
+        for json_file in conda_meta_dir.glob("*.json"):
+            try:
+                data = json.loads(json_file.read_text(encoding="utf-8"))
+                name = data.get("name", "").lower()
+                if not name:
+                    continue
+                
+                version = data.get("version", "")
+                build = data.get("build", "")
+                build = data.get("build", "")
+                channel = data.get("channel", "")
+                subdir = data.get("subdir", "")
+                depends = data.get("depends", [])
+                
+                add_pkg(PackageDetails(
+                    name=name,
+                    version=version,
+                    build=build,
+                    channel=channel,
+                    subdir=subdir,
+                    manager="conda",
+                    depends=depends,
+                    location=str(prefix / "lib" / "site-packages") # Heuristic for conda
+                ))
+            except Exception:
+                pass
+
+
+    # 2. Pip Packages via pip inspect
+    python_exe = None
+    if Path(sys.prefix).resolve() == prefix.resolve():
+        python_exe = sys.executable
+    else:
+        # Simple heuristic to find python
+        candidates = [prefix / "bin" / "python", prefix / "python.exe", prefix / "Scripts" / "python.exe"]
+        for c in candidates:
+            if c.exists():
+                python_exe = str(c)
+                break
+    
+    if python_exe:
+        try:
+            # Run pip inspect
+            result = subprocess.run(
+                [python_exe, "-m", "pip", "inspect"],
+                capture_output=True,
+                text=True,
+                check=True
             )
-        return packages
-    except Exception:
-        # If both fail, return empty (should warn user elsewhere)
-        return {}
+            inspect_data = json.loads(result.stdout)
+            installed = inspect_data.get("installed", [])
+            
+            for p in installed:
+                metadata = p.get("metadata", {})
+                name = metadata.get("name", "").lower() or metadata.get("Name", "").lower()
+                version = metadata.get("version", "") or metadata.get("Version", "")
+                # Location is usually not in metadata for pip inspect, but we can try derived logic
+                # metadata_location is in 'p', not 'metadata' usually?
+                # Check top level p for install location?
+                # Usually we want site-packages path to detect user-site (~/.local).
+                # 'metadata_location' points to .../site-packages/pkg-dist-info
+                # So we can parse parent of metadata_location.
+                loc = p.get("metadata_location", "")
+                if loc:
+                     import os
+                     location = os.path.dirname(loc)
+                else:
+                     location = metadata.get("Location", "")
+
+                
+                if not name:
+                    continue
+                
+                requires_dist = metadata.get("requires_dist", []) or metadata.get("Requires-Dist", [])
+                requires_python = metadata.get("requires_python", None) or metadata.get("Requires-Python", None)
+                
+                is_duplicate_of_conda = False
+                if name in packages:
+                    for existing in packages[name]:
+                        # If we have a conda package with same version, treat as same installation seen by pip
+                        # (Unless user specifically wants to catch shadowing? But usually piped conda pkg shows in pip)
+                        if existing.manager == "conda" and existing.version == version:
+                            is_duplicate_of_conda = True
+                            if requires_python and not existing.requires_python:
+                                existing.requires_python = requires_python
+                            break
+                
+                if not is_duplicate_of_conda:
+                    add_pkg(PackageDetails(
+                        name=name,
+                        version=version,
+                        manager="pip",
+                        depends=requires_dist,
+                        requires_python=requires_python,
+                        location=location
+                    ))
+                    
+        except Exception:
+            pass
+
+    return packages
 
 def _detect_cuda_info() -> tuple[Optional[str], List[Dict[str, Any]]]:
     """
@@ -212,32 +274,14 @@ def get_env_info_by_name(name: str) -> EnvInfo:
         if e.get("name") == name:
             path = e.get("path") or ""
             break
-    packages: Dict[str, PackageDetails] = {}
-    try:
-        result = subprocess.run(
-            ["conda", "list", "-n", name, "--json"],
-            capture_output=True,
-            text=True,
-            check=True
-        )
-        data = json.loads(result.stdout)
-        for pkg in data:
-            pkg_name = pkg.get("name", "").lower()
-            version = pkg.get("version", "")
-            build = pkg.get("build_string", None)
-            channel = pkg.get("channel", None)
-            manager = "conda"
-            if channel == "pypi" or pkg.get("scheduler_type") == "pypi":
-                manager = "pip"
-            packages[pkg_name] = PackageDetails(
-                name=pkg_name,
-                version=version,
-                build=build,
-                channel=channel,
-                manager=manager
-            )
-    except Exception:
-        pass
+            
+    env_path = Path(path) if path else Path(sys.prefix)
+    
+    packages = {}
+    if path:
+        packages = _list_packages(env_path)
+
+    # Try to get python version
     try:
         result = subprocess.run(
             ["conda", "run", "-n", name, "python", "-c", "import sys; print(sys.version.split()[0])"],
@@ -249,6 +293,7 @@ def get_env_info_by_name(name: str) -> EnvInfo:
             python_version = result.stdout.strip().splitlines()[-1]
     except Exception:
         pass
+        
     cuda_version, gpu_details = _detect_cuda_info()
     return EnvInfo(
         name=name,

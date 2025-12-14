@@ -358,11 +358,14 @@ class MigrationPlanner:
         rev_graph = self._build_reverse_dependency_graph(dep_graph)
         
         # Filter packages to migrate
-        packages_to_check = self.env_info.packages.values()
         if packages:
+            # Flatten
+            all_pkgs = [p for sublist in self.env_info.packages.values() for p in sublist]
             packages_to_check = [
-                p for p in packages_to_check if p.name in packages
+                p for p in all_pkgs if p.name in packages
             ]
+        else:
+            packages_to_check = [p for sublist in self.env_info.packages.values() for p in sublist]
         
         for pkg in packages_to_check:
             logger.debug(f"[migration] analyzing package {pkg.name}")
@@ -382,7 +385,14 @@ class MigrationPlanner:
                     dependencies=dep_graph.get(pkg.name, [])
                 ))
                 continue
-            group_pkgs = [self.env_info.packages[n] for n in group if n in self.env_info.packages]
+            # Retrieve list of packages for the group name
+            # If multiple versions exist, we pick the one matching the group logic ideally.
+            # But here group contains names.
+            group_pkgs = []
+            for n in group:
+                if n in self.env_info.packages:
+                    # Take all instances for now
+                    group_pkgs.extend(self.env_info.packages[n])
             for gp in group_pkgs:
                 s = self._analyze_package(gp, target_manager, channel)
                 steps.append(s)
@@ -503,7 +513,11 @@ class MigrationPlanner:
         graph: Dict[str, List[str]] = {}
         names = list(self.env_info.packages.keys())
         for name in names:
-            pkg = self.env_info.packages[name]
+            # For graph building, if strictly name-based, we have ambiguity if multiple installed.
+            # We'll use the first one or prefer conda to avoid cycles or complexity for now.
+            pkgs = self.env_info.packages[name]
+            # Prefer conda
+            pkg = next((p for p in pkgs if p.manager == "conda"), pkgs[0])
             logger.debug(f"[migration] resolving dependencies for {name}")
             cached = get_cached_deps(name)
             deps: List[str] = []

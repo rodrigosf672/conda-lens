@@ -27,7 +27,8 @@ def generate_repro_card(env: EnvInfo) -> dict:
     }
 
     # Sort packages by name
-    sorted_pkgs = sorted(env.packages.values(), key=lambda p: p.name)
+    all_pkgs = [p for sublist in env.packages.values() for p in sublist]
+    sorted_pkgs = sorted(all_pkgs, key=lambda p: p.name)
     for pkg in sorted_pkgs:
         pkg_dict = {
             "name": pkg.name,

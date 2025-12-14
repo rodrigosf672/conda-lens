@@ -75,7 +75,8 @@ def inspect(
 
         console.print(f"\n[bold]Packages ({len(env_info.packages)}):[/bold]")
         # List first 10 as a preview
-        sorted_pkgs = sorted(env_info.packages.values(), key=lambda p: p.name)
+        all_pkgs = [p for sublist in env_info.packages.values() for p in sublist]
+        sorted_pkgs = sorted(all_pkgs, key=lambda p: p.name)
         for p in sorted_pkgs[:10]:
             console.print(f" - {p.name} ({p.version}) [{p.manager}]")
         if len(sorted_pkgs) > 10:
@@ -342,7 +343,9 @@ def switch_all(
         planner = MigrationPlanner(env)
         report = planner.plan_migration(to, packages, channel)
         dep_graph = planner._build_dependency_graph()
-        group_order = planner._toposort([p.name for p in env.packages.values()], dep_graph)
+        report = planner.plan_migration(to, packages, channel)
+        dep_graph = planner._build_dependency_graph()
+        group_order = planner._toposort(list(env.packages.keys()), dep_graph)
     
     # JSON output
     if json_output:
