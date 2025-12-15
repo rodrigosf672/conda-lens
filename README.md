@@ -282,7 +282,19 @@ Reproducibility cards enable:
 - Documentation: Track environment evolution over time
 - Compliance: Maintain audit trails for production environments
 
-### Sharing Snapshots
+### Generating Snapshots (Quick Method)
+
+Use the `snap` command for a streamlined workflow with optional Git integration:
+
+```bash
+# Save to environment_snapshot.yaml
+conda-lens snap
+
+# Save and git commit
+conda-lens snap --git --message "Stable environment state"
+```
+
+### Sharing Snapshots (Standard Method)
 
 ```bash
 # Generate YAML snapshot

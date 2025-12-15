@@ -158,6 +158,67 @@ def repro_card(
             console.print(yaml.dump(card, sort_keys=False))
 
 @app.command()
+def snap(
+    message: str = typer.Option(None, "--message", "-m", help="Git commit message"),
+    output: Optional[Path] = typer.Option(None, "--output", "-o", help="Output file path (default: environment_snapshot.yaml)"),
+    format: str = typer.Option("yaml", help="Output format: yaml or json"),
+    git: bool = typer.Option(False, "--git", help="Perform git add/commit"),
+    force: bool = typer.Option(False, "--force", "-f", help="Overwrite existing file")
+):
+    """
+    Generate a snapshot and optionally commit to git (short alias for repro-card).
+    
+    Examples:
+        conda-lens snap                         # Save to environment_snapshot.yaml
+        conda-lens snap --git                   # Save and git commit
+        conda-lens snap -m "Stable state" --git # Custom commit message
+    """
+    import datetime
+    import subprocess
+    
+    target_file = output or Path("environment_snapshot.yaml")
+    
+    # Check overwrite
+    if target_file.exists() and not force:
+        # If git is enabled, we might assume overwrite is okay if tracked? 
+        # But safest to ask or require force, unless it's the default file and user didn't specify?
+        # Let's just warn if output is explicit. If default, maybe overwrite?
+        # For CLI usage, explicit is better.
+        console.print(f"[yellow]File {target_file} already exists. Using it as target.[/yellow]")
+    
+    with console.status("[bold green]Generating Snapshot..."):
+        env = get_active_env_info()
+        card = generate_repro_card(env)
+        
+    save_repro_card(card, str(target_file), format)
+    console.print(f"[bold green]✅ Snapshot saved to {target_file}[/bold green]")
+    
+    if git:
+        try:
+            # Check for git repo
+            subprocess.run(["git", "rev-parse", "--is-inside-work-tree"], check=True, capture_output=True)
+            
+            # Git Add
+            with console.status(f"[bold green]Adding {target_file} to git..."):
+                subprocess.run(["git", "add", str(target_file)], check=True, capture_output=True)
+            
+            # Git Commit
+            msg = message or f"Environment snapshot: {datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"
+            with console.status(f"[bold green]Committing..."):
+                subprocess.run(["git", "commit", "-m", msg], check=True, capture_output=True)
+            
+            console.print(f"[bold green]✅ Git commit successful: '{msg}'[/bold green]")
+            
+        except subprocess.CalledProcessError as e:
+            console.print(f"[red]Git operation failed:[/red]")
+            if e.stderr:
+                console.print(e.stderr.decode().strip())
+            else:
+                console.print("Make sure you are in a git repository and 'git' is installed.")
+        except FileNotFoundError:
+             console.print("[red]Git executable not found.[/red]")
+
+@app.command()
 def lint(path: Path = typer.Argument(Path("."), help="File or directory to lint")):
     """
     Check Python file(s) for missing imports.
