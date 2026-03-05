@@ -44,7 +44,7 @@ def make_env(name, pkgs):
         python_version="3.11.0",
         os_info="Darwin-24",
         platform_machine="arm64",
-        packages={k: PackageDetails(name=k, version=v, manager="conda") for k, v in pkgs.items()},
+        packages={k: [PackageDetails(name=k, version=v, manager="conda")] for k, v in pkgs.items()},
         cuda_driver_version=None,
         gpu_info=[],
     )

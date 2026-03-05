@@ -27,18 +27,19 @@ async def app_lifespan(app: FastAPI):
             try:
                 env = get_active_env_info()
                 planner = MigrationPlanner(env)
-                for name, pkg in env.packages.items():
-                    try:
-                        deps = []
-                        if pkg.manager == "conda":
-                            deps = planner._get_conda_dependencies(name, pkg.version)
-                        elif pkg.manager == "pip":
-                            deps = planner._get_pip_dependencies(name)
-                        if deps == PackageResolver.TIMEOUT:
+                for name, pkgs in env.packages.items():
+                    for pkg in pkgs:
+                        try:
                             deps = []
-                        set_cached_deps(name, deps, resolved=True)
-                    except Exception:
-                        pass
+                            if pkg.manager == "conda":
+                                deps = planner._get_conda_dependencies(name, pkg.version)
+                            elif pkg.manager == "pip":
+                                deps = planner._get_pip_dependencies(name)
+                            if deps == PackageResolver.TIMEOUT:
+                                deps = []
+                            set_cached_deps(name, deps, resolved=True)
+                        except Exception:
+                            pass
             except Exception:
                 pass
             time.sleep(24 * 3600)
@@ -92,10 +93,11 @@ def api_refresh():
     env = get_active_env_info()
     results = run_diagnostics(env)
     
+    all_pkgs = [p for sublist in env.packages.values() for p in sublist]
     return JSONResponse({
         "env_name": env.name,
         "python_version": env.python_version,
-        "package_count": len(env.packages),
+        "package_count": len(all_pkgs),
         "diagnostics_count": len(results),
         "has_errors": any(r.severity == "ERROR" for r in results)
     })
@@ -234,7 +236,8 @@ def api_migration_plan(target: str = "conda", limit: int = 50):
         env = get_active_env_info()
         planner = MigrationPlanner(env, use_disk_cache=True)
         # Build plan for all packages (cache-backed, fast)
-        sorted_pkgs = sorted(env.packages.values(), key=lambda p: p.name.lower())
+        all_pkgs = [p for sublist in env.packages.values() for p in sublist]
+        sorted_pkgs = sorted(all_pkgs, key=lambda p: p.name.lower())
         names = [p.name for p in sorted_pkgs]
         report = planner.plan_migration(target, packages=names)
         # Build group order preview
@@ -434,7 +437,8 @@ def dashboard(env_name: str = None):
     card_yaml = yaml.dump(card, sort_keys=False)
     
     # Calculate stats
-    sorted_packages = sorted(env.packages.values(), key=lambda p: p.name.lower())
+    all_pkgs = [p for sublist in env.packages.values() for p in sublist]
+    sorted_packages = sorted(all_pkgs, key=lambda p: p.name.lower())
     conda_count = sum(1 for p in sorted_packages if p.manager == "conda")
     pip_count = sum(1 for p in sorted_packages if p.manager == "pip")
     
@@ -1916,8 +1920,9 @@ def api_compare(envA: str, envB: str):
     only_in_b = sorted([n for n in b_pkgs.keys() if n not in a_pkgs])
     mismatches = []
     for n in a_pkgs.keys() & b_pkgs.keys():
-        av = a_pkgs[n].version
-        bv = b_pkgs[n].version
+        # packages is Dict[str, List[PackageDetails]], so get first package
+        av = a_pkgs[n][0].version
+        bv = b_pkgs[n][0].version
         if av != bv:
             mismatches.append({"name": n, "a_version": av, "b_version": bv})
     result = {

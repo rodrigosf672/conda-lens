@@ -79,6 +79,66 @@ The diagnostic engine checks for:
 - CUDA compatibility issues
 - Python version mismatches
 
+### Diagnostics Reference (Failure Examples)
+
+Conda-Lens implements specific rules to catch common environment breakages.
+
+#### VC (Version Conflict)
+**What it is:** A package requires a dependency version that is not satisfied by the installed version.
+**Example Failure:**
+```text
+[ERROR] Version Conflict Check
+pkg_a (1.5.0) requires numpy>=1.24, but installed: 1.21.5
+Suggestion: Try upgrading or reinstalling the conflicting packages.
+```
+
+#### DUP (Duplicate Installation)
+**What it is:** The same package is installed multiple times (e.g., once by conda, once by pip), causing import ambiguity.
+**Example Failure:**
+```text
+[WARNING] Duplicate Package Check
+Found duplicate packages:
+numpy: 1.21.5 (conda), 1.24.3 (pip)
+Suggestion: Remove duplicate installations using 'pip uninstall' or 'conda remove' to ensure deterministic behavior.
+```
+
+#### MISS (Missing Dependency)
+**What it is:** A known requirement for an installed package is completely missing from the environment.
+**Example Failure:**
+```text
+[ERROR] Missing Dependency Check
+pandas (2.0.3) requires 'pytz'
+Suggestion: Install missing dependencies to prevent runtime import errors.
+```
+
+#### PY (Python Compatibility)
+**What it is:** A package's metadata indicates it is incompatible with the currently running Python version, or a Conda build string targets a different Python ABI (e.g., `py39` build in a Python 3.11 env).
+**Example Failure:**
+```text
+[ERROR] Python Version Compatibility Check
+scipy (1.7.3) requires Python <3.10, but current is 3.11.0
+Suggestion: Reinstall incompatible packages to get correct builds.
+```
+
+#### ABI (Platform/Arch Mismatch)
+**What it is:** Packages built for a different architecture (e.g., Intel `osx-64`) are installed on an ARM (`osx-arm64`) system. This often happens on Apple Silicon Macs using Rosetta types unintentionally.
+**Example Failure:**
+```text
+[WARNING] ABI/Platform Compatibility Check
+tensorflow (2.13.0) is built for 'osx-64', but environment expects 'osx-arm64'
+Suggestion: Reinstall these packages to match the system architecture.
+```
+
+#### G (Graph Cycles)
+**What it is:** Circular dependencies detected in the package graph.
+**Example Failure:**
+```text
+[INFO] Dependency Graph Cycle Check
+Found dependency cycle:
+sphinx -> sphinx-rtd-theme -> sphinx
+Suggestion: Cycles are often benign but can cause installation issues.
+```
+
 ### Generate Reproducibility Snapshot
 
 Create a reproducibility card for your environment:
@@ -121,6 +181,22 @@ conda-lens switch-all --to conda --execute --yes
 ```
 
 Note: Migration execution is CLI-only. The dashboard provides read-only analysis.
+
+### Advanced Debugging
+
+#### Matrix Testing (Smoke Tests)
+Run a Python script across multiple Python versions to verify compatibility.
+
+```bash
+conda-lens matrix-test myscript.py --versions "3.10 3.11 3.12"
+```
+
+#### LLM Explanation
+Use an LLM (requires API key) to explain complex conda solver error logs.
+
+```bash
+conda-lens explain solver_error.log
+```
 
 ### Additional Commands
 
@@ -206,7 +282,19 @@ Reproducibility cards enable:
 - Documentation: Track environment evolution over time
 - Compliance: Maintain audit trails for production environments
 
-### Sharing Snapshots
+### Generating Snapshots (Quick Method)
+
+Use the `snap` command for a streamlined workflow with optional Git integration:
+
+```bash
+# Save to environment_snapshot.yaml
+conda-lens snap
+
+# Save and git commit
+conda-lens snap --git --message "Stable environment state"
+```
+
+### Sharing Snapshots (Standard Method)
 
 ```bash
 # Generate YAML snapshot

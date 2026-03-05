@@ -26,7 +26,9 @@ def warm_cache(parallel: bool = False):
         except Exception:
             pass
         try:
-            planner._get_conda_dependencies(name, env.packages[name].version)
+            # Just grab first package version for cache warming
+            ver = env.packages[name][0].version
+            planner._get_conda_dependencies(name, ver)
         except Exception:
             pass
         try:
