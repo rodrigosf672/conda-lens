@@ -29,6 +29,31 @@ I used AI to help write parts of the code, but I am testing and validating all t
 - Migration Analysis: Analyze package manager migrations (pip ↔ conda ↔ uv ↔ pixi)
 - Smart Caching: Fast resolver caching for improved performance
 - Web Dashboard: Optional browser-based UI for visual exploration
+- **Claude Code Skill**: Use `/conda-lens` directly inside [Claude Code](https://claude.ai/code) for AI-assisted diagnostics and fixes
+
+## Claude Code Skill
+
+Conda-Lens ships as a native [Claude Code](https://claude.ai/code) skill. Once installed, just type `/conda-lens` in Claude Code to get AI-assisted environment diagnostics and fix suggestions.
+
+### Quick Install
+
+1. **Install conda-lens**:
+   ```bash
+   pip install conda-lens
+   ```
+
+2. **Copy the skill files to your Claude Code skills directory**:
+   ```bash
+   cp skill/conda-lens-skill.md  ~/.claude/skills/
+   cp skill/conda_lens_skill.py  ~/.claude/skills/
+   ```
+
+3. **Use it in Claude Code**:
+   ```
+   /conda-lens
+   ```
+
+The skill auto-installs conda-lens if it is missing. See [`skill/conda-lens-skill.md`](skill/conda-lens-skill.md) for the full list of commands and usage examples.
 
 ## Architecture
 
