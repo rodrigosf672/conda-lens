@@ -15,7 +15,7 @@ def make_env(name='test-env'):
         os_info="Darwin-24",
         platform_machine="arm64",
         packages={
-            'numpy': PackageDetails(name='numpy', version='1.26.0', manager='conda'),
+            'numpy': [PackageDetails(name='numpy', version='1.26.0', manager='conda')],
         },
         cuda_driver_version=None,
         gpu_info=[],

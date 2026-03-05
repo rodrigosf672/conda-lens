@@ -16,7 +16,7 @@ def fake_env():
         os_info='Darwin-24',
         platform_machine='arm64',
         packages={
-            'numpy': PackageDetails(name='numpy', version='1.26.0', manager='pip'),
+            'numpy': [PackageDetails(name='numpy', version='1.26.0', manager='pip')],
         },
         cuda_driver_version=None,
         gpu_info=[],

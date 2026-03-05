@@ -11,8 +11,9 @@ def get_env_summary():
     add_src_to_syspath()
     from conda_lens.env_inspect import get_active_env_info
     env = get_active_env_info()
-    pip_count = sum(1 for x in env.packages.values() if x.manager == "pip")
-    conda_count = sum(1 for x in env.packages.values() if x.manager == "conda")
+    # env.packages is Dict[str, List[PackageDetails]]
+    pip_count = sum(1 for pkgs in env.packages.values() for x in pkgs if x.manager == "pip")
+    conda_count = sum(1 for pkgs in env.packages.values() for x in pkgs if x.manager == "conda")
     return {
         "name": env.name,
         "python": env.python_version,
@@ -25,5 +26,6 @@ def list_packages_by_manager(manager: str):
     add_src_to_syspath()
     from conda_lens.env_inspect import get_active_env_info
     env = get_active_env_info()
-    return sorted([p.name for p in env.packages.values() if p.manager == manager])
+    # env.packages is Dict[str, List[PackageDetails]]
+    return sorted([p.name for pkgs in env.packages.values() for p in pkgs if p.manager == manager])
 

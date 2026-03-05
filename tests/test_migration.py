@@ -20,29 +20,29 @@ from conda_lens.env_inspect import EnvInfo, PackageDetails
 def mock_env():
     """Create a mock environment with test packages."""
     packages = {
-        "numpy": PackageDetails(
+        "numpy": [PackageDetails(
             name="numpy",
             version="1.24.0",
             manager="pip",
             build="pypi_0",
             channel="pypi"
-        ),
-        "pandas": PackageDetails(
+        )],
+        "pandas": [PackageDetails(
             name="pandas",
             version="2.0.0",
             manager="conda",
             build="py311_0",
             channel="conda-forge"
-        ),
-        "torch": PackageDetails(
+        )],
+        "torch": [PackageDetails(
             name="torch",
             version="2.0.0",
             manager="pip",
             build="cu118",
             channel="pypi"
-        ),
+        )],
     }
-    
+
     return EnvInfo(
         name="test-env",
         path="/opt/conda/envs/test-env",
@@ -130,40 +130,40 @@ class TestMigrationPlanner:
     def test_analyze_package_missing(self, mock_env):
         """Test analysis when package is missing in target."""
         planner = MigrationPlanner(mock_env)
-        pkg = mock_env.packages["numpy"]
-        
+        pkg = mock_env.packages["numpy"][0]
+
         with patch.object(PackageResolver, 'search_conda', return_value=None):
             step = planner._analyze_package(pkg, "conda")
-        
+
         assert step.safety_status == SafetyStatus.MISSING
         assert step.target_version is None
-    
+
     def test_analyze_package_cuda_risk(self, mock_env):
         """Test CUDA build detection."""
         planner = MigrationPlanner(mock_env)
-        pkg = mock_env.packages["torch"]
-        
+        pkg = mock_env.packages["torch"][0]
+
         with patch.object(PackageResolver, 'search_conda', return_value="2.0.0"):
             step = planner._analyze_package(pkg, "conda")
-        
+
         assert step.safety_status == SafetyStatus.CUDA_RISK
-    
+
     def test_analyze_package_version_conflict(self, mock_env):
         """Test version mismatch detection."""
         planner = MigrationPlanner(mock_env)
-        pkg = mock_env.packages["numpy"]
-        
+        pkg = mock_env.packages["numpy"][0]
+
         with patch.object(PackageResolver, 'search_conda', return_value="1.25.0"):
             step = planner._analyze_package(pkg, "conda")
-        
+
         assert step.safety_status == SafetyStatus.CONFLICT
         assert "1.24.0 → 1.25.0" in step.reason
-    
+
     def test_analyze_package_safe(self, mock_env):
         """Test safe migration scenario."""
         planner = MigrationPlanner(mock_env)
-        pkg = mock_env.packages["numpy"]
-        
+        pkg = mock_env.packages["numpy"][0]
+
         with patch.object(PackageResolver, 'search_conda', return_value="1.24.0"):
             step = planner._analyze_package(pkg, "conda")
         
@@ -257,8 +257,8 @@ def make_simple_env():
         os_info="Darwin-24",
         platform_machine="arm64",
         packages={
-            "a": PackageDetails(name="a", version="1.0.0", manager="pip"),
-            "b": PackageDetails(name="b", version="1.0.0", manager="pip"),
+            "a": [PackageDetails(name="a", version="1.0.0", manager="pip")],
+            "b": [PackageDetails(name="b", version="1.0.0", manager="pip")],
         },
         cuda_driver_version=None,
         gpu_info=[],

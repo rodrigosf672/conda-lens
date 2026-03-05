@@ -1920,8 +1920,9 @@ def api_compare(envA: str, envB: str):
     only_in_b = sorted([n for n in b_pkgs.keys() if n not in a_pkgs])
     mismatches = []
     for n in a_pkgs.keys() & b_pkgs.keys():
-        av = a_pkgs[n].version
-        bv = b_pkgs[n].version
+        # packages is Dict[str, List[PackageDetails]], so get first package
+        av = a_pkgs[n][0].version
+        bv = b_pkgs[n][0].version
         if av != bv:
             mismatches.append({"name": n, "a_version": av, "b_version": bv})
     result = {

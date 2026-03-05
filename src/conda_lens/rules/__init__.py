@@ -9,6 +9,9 @@ from .python_compat import PythonCompatRule
 from .abi import ABIRule
 from .graph import GraphRule
 from .advanced import EdgeRules
+from .editable_shadow import EditableInstallShadowRule
+from .corrupt_metadata import CorruptMetadataRule
+from .manager_priority import ManagerPriorityRule
 
 ALL_RULES = [
     PipCondaMixRule,
@@ -20,5 +23,8 @@ ALL_RULES = [
     PythonCompatRule,
     ABIRule,
     GraphRule,
-    EdgeRules
+    EdgeRules,
+    EditableInstallShadowRule,
+    CorruptMetadataRule,
+    ManagerPriorityRule
 ]
